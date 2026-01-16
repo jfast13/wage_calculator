@@ -33,7 +33,7 @@ wages_percentiles <- load_org(
     # Use the most recent available CPI year
     cpi_base = c_cpi_u_extended[year == max(year)][1],
     real_wage = wage * (cpi_base / c_cpi_u_extended)
-  ) 
+  ) |> 
   
   # Convert hourly wages to annual (2080 hours = 40 hrs/week * 52 weeks)
   reframe(
@@ -43,7 +43,7 @@ wages_percentiles <- load_org(
       w = orgwgt / 12,  
       probs = percentiles
     ) * 2080,  
-    .by = period
+    .by = year
   )
 
 # Calculate productivity growth rate from 1979 to 2024Q4-2025Q3
@@ -69,11 +69,11 @@ productivity_growth <- read_csv("inputs/epi_productivity_pay_gap_web.csv")|>
 
 wages_calculator <- wages_percentiles |>
   pivot_wider(
-    names_from = period,
+    names_from = year,
     values_from = earnings
   ) |>
   rename(
-    actual = `Last 12 Months`,
+    actual = `2025`,
     potential = `1979`       
   ) |> 
   mutate(potential = potential * productivity_growth)
