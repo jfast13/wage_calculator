@@ -69,6 +69,24 @@ wages_percentiles <- load_org(
     .by = period
   )
 
+# Calculate productivity growth rate from 1979 to 2024Q4-2025Q3
+productivity_growth <- read_csv("inputs/epi_productivity_pay_gap_web.csv")|>
+  mutate(
+    year_num = as.numeric(substr(Year, 1, 4)),
+    quarter = substr(Year, 5, 6)
+  ) |>
+  filter(
+    year_num == 1979 | 
+    (year_num == 2024 & quarter == "q4") |
+    (year_num == 2025 & quarter %in% c("q1", "q2", "q3"))
+  ) |>
+  summarise(
+    mean_1979 = mean(Productivity[year_num == 1979]),
+    mean_recent = mean(Productivity[year_num >= 2024])
+  ) |>
+  mutate(growth_rate = (mean_recent / mean_1979)) |>
+  pull(growth_rate)
+
 # ==============================================================================
 # Data Frame output for calculator
 
@@ -81,7 +99,6 @@ wages_calculator <- wages_percentiles |>
     actual = `Last 12 Months`,
     potential = `1979`       
   ) |> 
-  # Apply productivity adjustment factor (90.2% growth since 1979)
-  mutate(potential = potential * 1.902)
+  mutate(potential = potential * productivity_growth)
 
 write.csv(wages_calculator, "output/wage_calculator_values.csv", row.names = FALSE)
