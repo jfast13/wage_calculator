@@ -81,7 +81,7 @@ wages_calculator <- wages_percentiles |>
     actual = `Last 12 Months`,
     potential = `1979`       
   ) |> 
-  # Apply productivity adjustment factor (87.3% growth since 1979)
+  # Apply productivity adjustment factor (90.2% growth since 1979)
   mutate(potential = potential * 1.902)
 
 write.csv(wages_calculator, "output/wage_calculator_values.csv", row.names = FALSE)
