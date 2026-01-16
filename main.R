@@ -16,47 +16,24 @@ var_list <- c("year", "month", "age", "selfemp", "selfinc", "emp",
 # ==============================================================================
 # Load and prepare CPI data
 
-cpi_monthly <- c_cpi_u_extended_monthly_nsa |> 
-  rename(c_cpi_u_month = c_cpi_u_extended)
-
 cpi_year <- c_cpi_u_extended_annual
 
 # ==============================================================================
 # Calculate wage percentiles for comparison periods
 
 wages_percentiles <- load_org(
-  c(1979, (current_year - 1):current_year),  # Load only needed years
-  all_of(c(var_list, "orgwgt", "finalwgt"))
+  c(1979, current_year),  # Load only needed years
+  all_of(c(var_list, "orgwgt"))
 ) |>
   filter(age >= 16, selfemp == 0, wage > 0) |>
   
-  # Define comparison periods: 1979 baseline vs. most recent 12 months
-  mutate(
-    period = case_when(
-      year == 1979 ~ "1979",
-      (year == current_year - 1 & month > max(month[year == current_year])) |
-      (year == current_year & month <= max(month[year == current_year])) ~ 
-        "Last 12 Months",
-      .default = NA_character_
-    )
-  ) |>
-  filter(!is.na(period)) |>  # Keep only comparison periods
-  
-  # Join CPI data for inflation adjustment
-  left_join(cpi_monthly, by = c("year", "month")) |>
   left_join(cpi_year, by = "year") |>
   
-  # Calculate reference CPI (average of most recent 12 months)
-  mutate(cpi_recent = mean(c_cpi_u_month[period == "Last 12 Months"], 
-                           na.rm = TRUE)) |>
-  
   mutate(
-    real_wage = if_else(
-      period == "1979",
-      wage * (cpi_recent / c_cpi_u_extended),  # Inflate 1979 wages
-      wage  # Recent wages need no adjustment
-    )
-  ) |>
+    # Use the most recent available CPI year
+    cpi_base = c_cpi_u_extended[year == max(year)][1],
+    real_wage = wage * (cpi_base / c_cpi_u_extended)
+  ) 
   
   # Convert hourly wages to annual (2080 hours = 40 hrs/week * 52 weeks)
   reframe(
